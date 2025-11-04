@@ -20,8 +20,12 @@ import re
 # define the LOLCode keywords
 KEYWORDS = {
     "HAI", "KTHXBYE", "GTFO",
+
+    # for switch-case
     "WTF?", "OMG", "OMGWTF", "OIC", 
-    "YR", "TIL", "WILE", "UPPIN", "NERFIN", "AN YR",
+
+    # for loops and function
+    "YR", "TIL", "WILE", "UPPIN", "NERFIN",
 
     "MEBBE",    # for if-else          
     "NOT",  # for operations
@@ -35,8 +39,6 @@ KEYWORDS = {
 
 # for multi-word keywords
 COMBINED_KEYWORDS = {
-    "IM IN YR", "IM OUTTA YR", "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ",
-
     # for if-else
     "O RLY?",
     "YA RLY",
@@ -59,6 +61,12 @@ COMBINED_KEYWORDS = {
 
     # for typecasting
     "IS NOW A"
+
+    # for loops
+    "IM IN YR", "IM OUTTA YR", 
+    
+    # for functions (definition, calling, and return)
+    "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ"
 
 }
 
@@ -169,7 +177,7 @@ def tokenize(lines):
             elif is_identifier(part):
                 line_tokens.append(Token("Identifier", part, line_num))
             else:
-                pass  #ignore unrecognized tokens
+                pass  # ignore unrecognized tokens
         
             index += 1 # go to next line
 
