@@ -178,6 +178,120 @@ def tokenize(lines):
 
     return tokens
 
+'''
+Tokenizes LOLCode user input statements (GIMMEH varident) 
+Based on grammar: <input> ::= gimmeh varident <linebreak>
+'''
+def tokenize_user_input(lines):
+    tokens = []  # list to store all (line number, token list) pairs
+
+    # Enumerate over all lines with their line numbers (starting from 1)
+    for line_num, line in enumerate(lines, start=1):
+        parts = line.strip().split()  # split the line into words, removing extra spaces
+
+        # Check if the line begins with the keyword "GIMMEH" and has at least one identifier after it
+        if len(parts) >= 2 and parts[0].upper() == "GIMMEH":
+
+            # Create two tokens:
+            # 1. "GIMMEH" as a Keyword
+            # 2. The next word (the variable name) as an Identifier
+            tokens.append((line_num, [
+                Token("Keyword", "GIMMEH", line_num),
+                Token("Identifier", parts[1], line_num)
+            ]))
+
+    return tokens
+
+'''
+Tokenizes LOLCode user output statements (VISIBLE ...)
+Based on grammar: <print> ::= VISIBLE varident | VISIBLE <expr> | VISIBLE <literal>
+'''
+def tokenize_user_output(lines):
+    tokens = []  # list to store all (line number, token list) pairs
+
+    # Enumerate through each line of the code
+    for line_num, line in enumerate(lines, start=1):
+        # Split the line into two parts:
+        # parts[0] = first word (should be "VISIBLE")
+        # parts[1] = everything after it (the expression or literal)
+        parts = line.strip().split(maxsplit=1)
+
+        # Check if the first word is the keyword "VISIBLE"
+        if len(parts) >= 1 and parts[0].upper() == "VISIBLE":
+            # Start building the token list for this line
+            line_tokens = [Token("Keyword", "VISIBLE", line_num)]
+
+            # If there’s something after "VISIBLE", classify what it is
+            if len(parts) > 1:
+                expr = parts[1]  # everything after VISIBLE
+
+                # Check if expr matches a literal (string, number, or troof)
+                if is_yarn(expr) or is_numbar(expr) or is_numbr(expr) or is_troof(expr):
+                    line_tokens.append(Token("Literal", expr, line_num))
+
+                # If not a literal, check if it’s a variable identifier
+                elif is_identifier(expr):
+                    line_tokens.append(Token("Identifier", expr, line_num))
+
+                # Otherwise, treat it as a complex expression (e.g., SUM OF ...)
+                else:
+                    line_tokens.append(Token("Expression", expr, line_num))
+
+            # Add this line’s tokens to the overall token list
+            tokens.append((line_num, line_tokens))
+
+    # Return all user output tokens found in the LOLCode file
+    return tokens
+
+'''
+Tokenizes LOLCode variable declarations and assignments.
+Based on grammar:
+<declaration> ::= I HAS A varident [ITZ <expr>] <linebreak>
+<assignment>  ::= varident R <expr> <linebreak>
+'''
+def tokenize_variables(lines):
+    tokens = []  # list to store all variable-related tokens
+
+    # Iterate through each line of LOLCode
+    for line_num, line in enumerate(lines, start=1):
+        parts = line.strip().split()  # split the line into words
+
+        # Case 1: Variable Declaration
+        if len(parts) >= 3 and parts[0].upper() == "I" and parts[1].upper() == "HAS" and parts[2].upper() == "A":
+            # Begin a token list for this line
+            line_tokens = [
+                Token("Keyword", "I HAS A", line_num),  # "I HAS A" is treated as a declaration keyword
+                Token("Identifier", parts[3], line_num)  # The next word is the variable name
+            ]
+
+            # If "ITZ" appears, there’s an initial value assigned
+            if len(parts) > 4 and parts[4].upper() == "ITZ":
+                # Combine the rest of the line into a single expression string
+                expr = " ".join(parts[5:])
+                # Add tokens for the ITZ keyword and its expression value
+                line_tokens.append(Token("Keyword", "ITZ", line_num))
+                line_tokens.append(Token("Expression", expr, line_num))
+
+            # Add the declaration tokens to the list
+            tokens.append((line_num, line_tokens))
+
+        # Case 2: Variable Assignment
+        elif len(parts) >= 3 and parts[1].upper() == "R":
+            varname = parts[0]             # first word is the variable name
+            expr = " ".join(parts[2:])     # everything after 'R' is the expression
+
+            # Create tokens for identifier, assignment keyword, and expression
+            line_tokens = [
+                Token("Identifier", varname, line_num),  
+                Token("Keyword", "R", line_num),         
+                Token("Expression", expr, line_num)      
+            ]
+
+            # Add assignment tokens to the list
+            tokens.append((line_num, line_tokens))
+
+    return tokens
+
 # main program
 def main():
     filename = input("\nPlease input your LOL filename: ")
@@ -186,12 +300,28 @@ def main():
     cleanedLines = removeComments(lines)
 
     tokenized = tokenize(cleanedLines)
+    user_input_tokens = tokenize_user_input(cleanedLines)
+    user_output_tokens = tokenize_user_output(cleanedLines)
+    variable_tokens = tokenize_variables(cleanedLines)
 
     print("\nTOKENS (per line):\n")
     # traverse the tokens to print
     for index, line in tokenized:
         if line:  # skip empty lists
             print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
+
+    print("\nUSER INPUT TOKENS (per line):\n")
+    for index, line in user_input_tokens:
+        print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
+
+    print("\nUSER OUTPUT TOKENS (per line):\n")
+    for index, line in user_output_tokens:
+        print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
+
+    print("\nVARIABLE TOKENS (per line):\n")
+    for index, line in variable_tokens:
+        print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
+
 
 # run main program
 main()
