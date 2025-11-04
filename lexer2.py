@@ -20,12 +20,8 @@ import re
 # define the LOLCode keywords
 KEYWORDS = {
     "HAI", "KTHXBYE", "GTFO",
-
-    # for switch-case
     "WTF?", "OMG", "OMGWTF", "OIC", 
-
-    # for loops and function
-    "YR", "TIL", "WILE", "UPPIN", "NERFIN",
+    "YR", "TIL", "WILE", "UPPIN", "NERFIN", "AN YR",
 
     "MEBBE",    # for if-else          
     "NOT",  # for operations
@@ -39,6 +35,8 @@ KEYWORDS = {
 
 # for multi-word keywords
 COMBINED_KEYWORDS = {
+    "IM IN YR", "IM OUTTA YR", "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ",
+
     # for if-else
     "O RLY?",
     "YA RLY",
@@ -61,12 +59,6 @@ COMBINED_KEYWORDS = {
 
     # for typecasting
     "IS NOW A"
-
-    # for loops
-    "IM IN YR", "IM OUTTA YR", 
-    
-    # for functions (definition, calling, and return)
-    "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ"
 
 }
 
@@ -177,7 +169,7 @@ def tokenize(lines):
             elif is_identifier(part):
                 line_tokens.append(Token("Identifier", part, line_num))
             else:
-                pass  # ignore unrecognized tokens
+                pass  #ignore unrecognized tokens
         
             index += 1 # go to next line
 
@@ -186,122 +178,150 @@ def tokenize(lines):
 
     return tokens
 
-# Tokenizes lexemes in input statements (e.g., "GIMMEH varname")
+'''
+Tokenizes LOLCode user input statements (GIMMEH varident) 
+Based on grammar: <input> ::= gimmeh varident <linebreak>
+'''
 def tokenize_user_input(lines):
-    tokens = []  # Stores (line_number, [token list])
+    tokens = []  # list to store all (line number, token list) pairs
 
+    # Enumerate over all lines with their line numbers (starting from 1)
     for line_num, line in enumerate(lines, start=1):
-        # Only process lines that contain the keyword GIMMEH
-        if "GIMMEH" in line:
-            # Split line into lexemes (words, symbols, or strings)
-            parts = re.findall(r'"[^"]*"|[\w\?\!\-]+|[^\s]', line)
-            line_tokens = []
+        parts = line.strip().split()  # split the line into words, removing extra spaces
 
-            for part in parts:
-                if part == "GIMMEH":
-                    line_tokens.append(Token("Keyword", part, line_num))
-                elif is_identifier(part):
-                    line_tokens.append(Token("Identifier", part, line_num))
-                elif is_yarn(part) or is_numbr(part) or is_numbar(part) or is_troof(part):
-                    line_tokens.append(Token("Literal", part, line_num))
-                elif part in KEYWORDS or part in COMBINED_KEYWORDS:
-                    line_tokens.append(Token("Keyword", part, line_num))
-                # Ignore unrecognized parts after
+        # Check if the line begins with the keyword "GIMMEH" and has at least one identifier after it
+        if len(parts) >= 2 and parts[0].upper() == "GIMMEH":
 
-            # Add the tokens for this line if any exist
-            if line_tokens:
-                tokens.append((line_num, line_tokens))
+            # Create two tokens:
+            # 1. "GIMMEH" as a Keyword
+            # 2. The next word (the variable name) as an Identifier
+            tokens.append((line_num, [
+                Token("Keyword", "GIMMEH", line_num),
+                Token("Identifier", parts[1], line_num)
+            ]))
 
     return tokens
 
-# Tokenizes lexemes in output statements (e.g., "VISIBLE varname" or "VISIBLE expression")
+'''
+Tokenizes LOLCode user output statements (VISIBLE ...)
+Based on grammar: <print> ::= VISIBLE varident | VISIBLE <expr> | VISIBLE <literal>
+'''
 def tokenize_user_output(lines):
-    tokens = []  # Stores (line_number, [token list])
+    tokens = []  # list to store all (line number, token list) pairs
 
+    # Enumerate through each line of the code
     for line_num, line in enumerate(lines, start=1):
-        # Only process lines that contain the keyword VISIBLE
-        if "VISIBLE" in line:
-            # Split line into lexemes (words, symbols, or strings)
-            parts = re.findall(r'"[^"]*"|[\w\?\!\-]+|[^\s]', line)
-            line_tokens = []
+        # Split the line into two parts:
+        # parts[0] = first word (should be "VISIBLE")
+        # parts[1] = everything after it (the expression or literal)
+        parts = line.strip().split(maxsplit=1)
 
-            for part in parts:
-                if part == "VISIBLE":
-                    line_tokens.append(Token("Keyword", part, line_num))
-                elif is_identifier(part):
-                    line_tokens.append(Token("Identifier", part, line_num))
-                elif is_yarn(part) or is_numbr(part) or is_numbar(part) or is_troof(part):
-                    line_tokens.append(Token("Literal", part, line_num))
-                elif part in KEYWORDS or part in COMBINED_KEYWORDS:
-                    line_tokens.append(Token("Keyword", part, line_num))
-                # Ignore unrecognized parts after
+        # Check if the first word is the keyword "VISIBLE"
+        if len(parts) >= 1 and parts[0].upper() == "VISIBLE":
+            # Start building the token list for this line
+            line_tokens = [Token("Keyword", "VISIBLE", line_num)]
 
-            # Add tokens for this line if any exist
-            if line_tokens:
-                tokens.append((line_num, line_tokens))
+            # If there’s something after "VISIBLE", classify what it is
+            if len(parts) > 1:
+                expr = parts[1]  # everything after VISIBLE
 
+                # Check if expr matches a literal (string, number, or troof)
+                if is_yarn(expr) or is_numbar(expr) or is_numbr(expr) or is_troof(expr):
+                    line_tokens.append(Token("Literal", expr, line_num))
+
+                # If not a literal, check if it’s a variable identifier
+                elif is_identifier(expr):
+                    line_tokens.append(Token("Identifier", expr, line_num))
+
+                # Otherwise, treat it as a complex expression (e.g., SUM OF ...)
+                else:
+                    line_tokens.append(Token("Expression", expr, line_num))
+
+            # Add this line’s tokens to the overall token list
+            tokens.append((line_num, line_tokens))
+
+    # Return all user output tokens found in the LOLCode file
     return tokens
 
-# Tokenizes lexemes in variable declarations ("I HAS A") and assignments ("R")
+'''
+Tokenizes LOLCode variable declarations and assignments.
+Based on grammar:
+<declaration> ::= I HAS A varident [ITZ <expr>] <linebreak>
+<assignment>  ::= varident R <expr> <linebreak>
+'''
 def tokenize_variables(lines):
-    tokens = []  # Stores (line_number, [token list])
+    tokens = []  # list to store all variable-related tokens
 
+    # Iterate through each line of LOLCode
     for line_num, line in enumerate(lines, start=1):
-        # Only process lines with variable declarations or assignments
-        if "I HAS A" in line or " R " in line:
-            # Split line into lexemes (words, symbols, or strings)
-            parts = re.findall(r'"[^"]*"|[\w\?\!\-]+|[^\s]', line)
-            line_tokens = []
+        parts = line.strip().split()  # split the line into words
 
-            for part in parts:
-                if part in {"I", "HAS", "A", "ITZ", "R"} or part in KEYWORDS or part in COMBINED_KEYWORDS:
-                    line_tokens.append(Token("Keyword", part, line_num))
-                elif is_identifier(part):
-                    line_tokens.append(Token("Identifier", part, line_num))
-                elif is_yarn(part) or is_numbr(part) or is_numbar(part) or is_troof(part):
-                    line_tokens.append(Token("Literal", part, line_num))
-                # Ignore unrecognized parts after
+        # Case 1: Variable Declaration
+        if len(parts) >= 3 and parts[0].upper() == "I" and parts[1].upper() == "HAS" and parts[2].upper() == "A":
+            # Begin a token list for this line
+            line_tokens = [
+                Token("Keyword", "I HAS A", line_num),  # "I HAS A" is treated as a declaration keyword
+                Token("Identifier", parts[3], line_num)  # The next word is the variable name
+            ]
 
-            # Add tokens for this line if any exist
-            if line_tokens:
-                tokens.append((line_num, line_tokens))
+            # If "ITZ" appears, there’s an initial value assigned
+            if len(parts) > 4 and parts[4].upper() == "ITZ":
+                # Combine the rest of the line into a single expression string
+                expr = " ".join(parts[5:])
+                # Add tokens for the ITZ keyword and its expression value
+                line_tokens.append(Token("Keyword", "ITZ", line_num))
+                line_tokens.append(Token("Expression", expr, line_num))
 
-    return tokens  
+            # Add the declaration tokens to the list
+            tokens.append((line_num, line_tokens))
+
+        # Case 2: Variable Assignment
+        elif len(parts) >= 3 and parts[1].upper() == "R":
+            varname = parts[0]             # first word is the variable name
+            expr = " ".join(parts[2:])     # everything after 'R' is the expression
+
+            # Create tokens for identifier, assignment keyword, and expression
+            line_tokens = [
+                Token("Identifier", varname, line_num),  
+                Token("Keyword", "R", line_num),         
+                Token("Expression", expr, line_num)      
+            ]
+
+            # Add assignment tokens to the list
+            tokens.append((line_num, line_tokens))
+
+    return tokens
 
 # main program
 def main():
     filename = input("\nPlease input your LOL filename: ")
     lines = readInputFile(filename)
-
-    # Remove comments before tokenizing
+    # remove comments first before tokenizing
     cleanedLines = removeComments(lines)
 
-    # Perform all tokenizations
     tokenized = tokenize(cleanedLines)
     user_input_tokens = tokenize_user_input(cleanedLines)
     user_output_tokens = tokenize_user_output(cleanedLines)
     variable_tokens = tokenize_variables(cleanedLines)
 
-    # Display main tokens
     print("\nTOKENS (per line):\n")
+    # traverse the tokens to print
     for index, line in tokenized:
-        if line:
+        if line:  # skip empty lists
             print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
 
-    # Display user input tokens
     print("\nUSER INPUT TOKENS (per line):\n")
     for index, line in user_input_tokens:
         print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
 
-    # Display user output tokens
     print("\nUSER OUTPUT TOKENS (per line):\n")
     for index, line in user_output_tokens:
         print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
 
-    # Display variable tokens
     print("\nVARIABLE TOKENS (per line):\n")
     for index, line in variable_tokens:
         print(f"Line {index}: [{', '.join(str(token) for token in line)}]")
+
 
 # run main program
 main()
