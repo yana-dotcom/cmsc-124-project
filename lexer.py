@@ -21,12 +21,45 @@ import re
 KEYWORDS = {
     "HAI", "KTHXBYE", "GTFO",
     "WTF?", "OMG", "OMGWTF", "OIC", 
-    "YR", "TIL", "WILE", "UPPIN", "NERFIN", "AN YR"
+    "YR", "TIL", "WILE", "UPPIN", "NERFIN", "AN YR",
+
+    "MEBBE",    # for if-else          
+    "NOT",  # for operations
+    "DIFFRINT", # for operations
+    "SMOOSH",   # for operations
+    "AN"    # for operations
+    "MKAY", # for operations
+    "MAEK", # for typecasting
+    "A",    # for typecasting
 }
 
 # for multi-word keywords
 COMBINED_KEYWORDS = {
-    "IM IN YR", "IM OUTTA YR", "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ"
+    "IM IN YR", "IM OUTTA YR", "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ",
+
+    # for if-else
+    "O RLY?",
+    "YA RLY",
+    "NO WAI",
+
+    # for operations
+    "SUM OF",
+    "DIFF OF",
+    "PRODUKT OF",
+    "QUOSHUNT OF",
+    "MOD OF",
+    "BIGGR OF",
+    "SMALLR OF",
+    "BOTH OF",
+    "EITHER OF",
+    "WON OF",
+    "ALL OF",
+    "ANY OF",
+    "BOTH SAEM",
+
+    # for typecasting
+    "IS NOW A"
+
 }
 
 # helper functions in matching literals and identifiers
