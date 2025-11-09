@@ -17,59 +17,86 @@ import re
 
 # ----- TOKENS ------
 
-# define the LOLCode keywords
-KEYWORDS = {
-    "HAI", "KTHXBYE", "GTFO",
-    "WTF?", "OMG", "OMGWTF", "OIC", 
-    "YR", "TIL", "WILE", "UPPIN", "NERFIN",
+# define the LOLCode keywords and their classification
+LEXEMES_CLASSIFICATION = {
+    # code delimeters
+    "HAI": "Code Delimeter",
+    "KTHXBYE": "Code Delimiter",
 
-    "WAZZUP", "BUHBYE", "R", "ITZ"
+    # variable declaration delimeters
+    "WAZZUP": "Variable Declaration Delimiter",
+    "BUHBYE": "Variable Declaration Delimiter",
 
-    "MEBBE",    # for if-else          
-    "NOT",  # for operations
-    "DIFFRINT", # for operations
-    "SMOOSH",   # for operations
-    "AN",   # for operations
-    "MKAY", # for operations
-    "MAEK", # for typecasting
-    "A",    # for typecasting
+    # variable declaration and assignment
+    "I HAS A": "Variable Declaration",
+    "ITZ": "Variable Assignment",
+
+    # input and output
+    "VISIBLE": "Output Keyword",
+    "GIMMEH": "Input Keyword",
+
+    # operations
+    "SUM OF": "Arithmetic Operator",
+    "DIFF OF": "Arithmetic Operator",
+    "PRODUKT OF": "Arithmetic Operator",
+    "QUOSHUNT OF": "Arithmetic Operator",
+    "MOD OF": "Arithmetic Operator",
+    "BIGGR OF": "Arithmetic Operator",
+    "SMALLR OF": "Arithmetic Operator",
+    "BOTH OF": "Boolean Operator",
+    "EITHER OF": "Boolean Operator",
+    "WON OF": "Boolean Operator",
+    "NOT": "Boolean Operator",
+    "ALL OF": "Boolean Operator",
+    "ANY OF": "Boolean Operator",
+    "BOTH SAEM": "Comparison Operator",
+    "DIFFRINT": "Comparison Operator",
+    "SMOOSH": "String Concatenation Operator",
+    "MKAY": "Expression End",
+    "AN": "Conjunction",
+
+    # typecasting
+    "MAEK": "Explicit Typecasting",
+    "IS NOW A": "Type Recasting",
+    "A" : "Type Declaration",
+
+    # assignment
+    "R": "Assignment Operation",
+
+    # if-then statements
+    "O RLY?": "Conditional Start",
+    "YA RLY": "If Branch",
+    "NO WAI": "Else Branch",
+    "OIC": "Statement End",
+    "MEBBE": "Else-If Clause",
+
+    # switch-case statements
+    "WTF?": "Switch Start", 
+    "OMG": "Switch Cases", 
+    "OMGWTF": "Default Case",
+
+    # loops
+    "IM IN YR": "Loop Start", 
+    "IM OUTTA YR": "Loop End",
+    "YR": "Loop Variable Reference",
+    "TIL": "Loop Until Condition",
+    "WILE": "Loop While Condition",
+    "UPPIN": "Loop Increment",
+    "NERFIN": "Loop Decrement",
+
+    # functions
+    "HOW IZ I": "Function Definition",
+    "IF U SAY SO": "Function End",
+    "I IZ": "Function Call",
+    "FOUND YR": "Function Return",
+    "GTFO": "Return/Break Statement",
+
+    # general
+    "\"": "String Delimeter"
 }
 
-# for multi-word keywords
-COMBINED_KEYWORDS = {
-    "IM IN YR", "IM OUTTA YR", "HOW IZ I", "IF U SAY SO", "FOUND YR",
-
-    # for if-else
-    "O RLY?",
-    "YA RLY",
-    "NO WAI",
-
-    # for operations
-    "SUM OF",
-    "DIFF OF",
-    "PRODUKT OF",
-    "QUOSHUNT OF",
-    "MOD OF",
-    "BIGGR OF",
-    "SMALLR OF",
-    "BOTH OF",
-    "EITHER OF",
-    "WON OF",
-    "ALL OF",
-    "ANY OF",
-    "BOTH SAEM",
-
-    # for typecasting 
-    "IS NOW A"
-
-    # for loops
-    "IM IN YR", "IM OUTTA YR", 
-    
-    # for functions (definition, calling, and return)
-    "HOW IZ I", "IF U SAY SO", "FOUND YR", "I IZ",
-    "I HAS A"
-
-}
+# flatten keywords for lookup
+KEYWORDS = set(LEXEMES_CLASSIFICATION.keys())
 
 # helper functions in matching literals and identifiers
 def is_numbr(token):
@@ -93,13 +120,13 @@ def is_identifier(token):
 
 # Token class -- defines how the tokens are displayed when printed
 class Token:
-    def __init__(self, token_type, value, line):
-        self.type = token_type
+    def __init__(self, value, category, line):
         self.value = value
+        self.category = category
         self.line = line
 
     def __repr__(self):
-        return f"{self.type}: {self.value}"
+        return f"{self.value}:{self.category}"
 
 # for reading input LOL file
 def readInputFile(filename):
@@ -108,7 +135,6 @@ def readInputFile(filename):
 
 # helper function to remove comments
 def removeComments(lines):
-
     cleanedLines = []
     in_block_comment = False
 
@@ -145,9 +171,11 @@ def tokenize(lines):
         line_tokens = []
 
         # split the content of each line except strings
-        parts = re.findall(r'"[^"]*"|[\w\?\!\-]+|[^\s]', line)
+        parts = re.findall(r'"|[^"\s]+', line)
 
         index = 0
+        prev_category = None  # track the last keyword’s category
+
         while index < len(parts):
             part = parts[index]
 
@@ -156,8 +184,10 @@ def tokenize(lines):
                 three_word = f"{parts[index]} {parts[index+1]} {parts[index+2]}"  # combine the keywords
 
                 # check if it is part of the defined keywords
-                if three_word in COMBINED_KEYWORDS:
-                    line_tokens.append(Token("Keyword", three_word, line_num)) #append to tokens if it is
+                if three_word in KEYWORDS:
+                    category = LEXEMES_CLASSIFICATION[three_word]
+                    line_tokens.append(Token(three_word, category, line_num)) #append to tokens if it is part of the defined keywords
+                    prev_category = category
                     index += 3
                     continue
             
@@ -166,18 +196,37 @@ def tokenize(lines):
                 two_word = f"{parts[index]} {parts[index+1]}"  # combine the keywords
 
                 # check if it is part of the defined keywords
-                if two_word in COMBINED_KEYWORDS:
-                    line_tokens.append(Token("Keyword", two_word, line_num)) #append to tokens if it is
+                if two_word in KEYWORDS:
+                    category = LEXEMES_CLASSIFICATION[two_word]
+                    line_tokens.append(Token(two_word, category, line_num)) #append to tokens if it is part of the defined keywords
+                    prev_category = category
                     index += 2
                     continue
 
             # 03: classify the single tokens
             if part in KEYWORDS:
-                line_tokens.append(Token("Keyword", part, line_num))
+                category = LEXEMES_CLASSIFICATION[part]
+                line_tokens.append(Token(part, category, line_num))
+                prev_category = category
+            
             elif is_numbr(part) or is_numbar(part) or is_yarn(part) or is_type_literal(part) or is_troof(part):
-                line_tokens.append(Token("Literal", part, line_num))
+                line_tokens.append(Token(part, "Literal", line_num))
+                prev_category = "Literal"
+            
             elif is_identifier(part):
-                line_tokens.append(Token("Identifier", part, line_num))
+                # identify the type of identifer based on category of preceeding text
+
+                if prev_category in {"Loop Start", "Loop End"}:
+                    category = "Loop Identifier"
+                elif prev_category in {"Function Definition", "Function Call", "Function Return"}:
+                    category = "Function Identifier"
+                else:
+                    category = "Variable Identifier"  #default case
+
+                line_tokens.append(Token(part, category, line_num))
+                prev_category = category
+            elif part == '"':
+                line_tokens.append(Token(part, "String Delimiter", line_num))
             else:
                 pass  #ignore unrecognized tokens
         
