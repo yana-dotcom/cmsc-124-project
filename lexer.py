@@ -29,7 +29,7 @@ KEYWORDS = {
     "NOT",  # for operations
     "DIFFRINT", # for operations
     "SMOOSH",   # for operations
-    "AN"    # for operations
+    "AN",   # for operations
     "MKAY", # for operations
     "MAEK", # for typecasting
     "A",    # for typecasting
@@ -123,13 +123,14 @@ def removeComments(lines):
         if in_block_comment:
             if "TLDR" in line.strip():
                 in_block_comment = False
+            cleanedLines.append("") # add it first as an empty string
             continue
 
         # handle inline comment (remove everything after BTW)
         if "BTW" in line.strip():
             line = line.split("BTW", 1)[0]
         
-        cleanedLines.append(line)
+        cleanedLines.append(line.rstrip("\n")) # to keep original lines and indexes (removed newline in the right-end of each text)
     
     return cleanedLines
 

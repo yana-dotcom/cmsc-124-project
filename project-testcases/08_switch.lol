@@ -13,6 +13,10 @@ HAI
 	VISIBLE "Choice: "
 	GIMMEH choice
 
+	OBTW
+		comment_here
+	TLDR
+
 	choice
 	WTF?
 		OMG 1
